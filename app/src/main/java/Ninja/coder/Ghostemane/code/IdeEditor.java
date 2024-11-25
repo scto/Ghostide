@@ -10,6 +10,8 @@ import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.Log;
+import io.github.rosemoe.sora.event.ClickEvent;
+import io.github.rosemoe.sora.langs.html.HTMLLanguage;
 import io.github.rosemoe.sora.text.Content;
 import android.os.Handler;
 import android.os.Looper;
@@ -33,7 +35,6 @@ import io.github.rosemoe.sora.text.FormatThread;
 import io.github.rosemoe.sora.util.KeyboardUtils;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.EditorColorScheme;
-import io.github.rosemoe.sora.widget.SymbolChannel;
 
 import io.github.rosemoe.sora.widget.tooltip.ToolTipHelper;
 import java.io.File;
@@ -67,7 +68,6 @@ public class IdeEditor extends CodeEditor implements IEditor {
 
   public IdeEditor(Context context, AttributeSet set) {
     super(context, set);
-
     init();
   }
 
@@ -86,15 +86,18 @@ public class IdeEditor extends CodeEditor implements IEditor {
     setLineInfoTextSize(18f);
     setScalable(true);
     setCursorWidth(4.0f);
-
-    setNonPrintablePaintingFlags(
-        FLAG_DRAW_WHITESPACE_LEADING
-            | FLAG_DRAW_WHITESPACE_INNER
-            | FLAG_GHOSTWEB
-            | FLAG_DRAW_WHITESPACE_FOR_EMPTY_LINE);
+    setDividerWidth(19);
+    setPinLineNumber(true);
+    setDividerMargin(10f);
+    setNonPrintablePaintingFlags(FLAG_GHOSTWEB);
+    subscribeEvent(ClickEvent.class, ((event, unsubscribe) -> ta(event)));
     subscribeEvent(ContentChangeEvent.class, ((event, unsubscribe) -> handleContentChange(event)));
+    
+
     return this;
   }
+
+  void ta(ClickEvent ev) {}
 
   public void setFadein() {}
 
@@ -117,8 +120,7 @@ public class IdeEditor extends CodeEditor implements IEditor {
   }
 
   public void appendText(String rgs) {
-    SymbolChannel sys = createNewSymbolChannel();
-    sys.insertSymbol(rgs, (int) 1);
+    insertText(rgs, rgs.length() == 0 ? rgs.length() : 1);
   }
 
   private void Dialog(CharSequence title, CharSequence massges) {
@@ -128,6 +130,10 @@ public class IdeEditor extends CodeEditor implements IEditor {
         .setPositiveButton("ok", null)
         .setBackground(colorAcsentDialog())
         .show();
+  }
+
+  public void setEditorPathFile(File file) {
+    file = getFile();
   }
 
   public void left() {
@@ -261,8 +267,6 @@ public class IdeEditor extends CodeEditor implements IEditor {
     this.call = callBack;
   }
 
-  
-
   public interface Result {
     void onTextEnd(String data);
   }
@@ -280,7 +284,8 @@ public class IdeEditor extends CodeEditor implements IEditor {
       final var content = event.getChangedText();
       final var endLine = event.getChangeEnd().line;
       final var endColumn = event.getChangeEnd().column;
-      if (getEditorLanguage() instanceof XMLLanguage) {
+      if (getEditorLanguage() instanceof XMLLanguage
+          || getEditorLanguage() instanceof HTMLLanguage) {
         boolean isOpen = false;
         try {
           isOpen = editor.getText().charAt(editor.getCursor().getLeft() - 2) == '<';

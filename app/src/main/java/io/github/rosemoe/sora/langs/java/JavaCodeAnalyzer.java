@@ -8,7 +8,6 @@ import androidx.core.graphics.ColorUtils;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
-import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
@@ -48,20 +47,8 @@ public class JavaCodeAnalyzer implements CodeAnalyzer {
   private final WeakReference<IdeEditor> mEditorReference;
   private final List<DiagnosticWrapper> mDiagnostics;
   private static final Object OBJECT = new Object();
-  private Set<Integer> usedColors = new HashSet<>();
-  private Map<String, Boolean> mapStyle;
 
-  private static final int MAX_BRACE_COUNT = Integer.MAX_VALUE;
-  private static final int[] BRACE_COLORS = {
-    EditorColorScheme.OPERATOR,
-    EditorColorScheme.KEYWORD,
-    EditorColorScheme.ATTRIBUTE_NAME,
-    EditorColorScheme.COLOR_WARNING,
-    EditorColorScheme.HTML_TAG,
-    EditorColorScheme.LITERAL,
-    EditorColorScheme.Ninja,
-    EditorColorScheme.ATTRIBUTE_NAME
-  };
+  private Map<String, Boolean> mapStyle;
 
   public JavaCodeAnalyzer(IdeEditor editor) {
     mEditorReference = new WeakReference<>(editor);
@@ -93,8 +80,7 @@ public class JavaCodeAnalyzer implements CodeAnalyzer {
       if (editor == null) {
         return;
       }
-      StringBuilder text =
-          content instanceof StringBuilder ? (StringBuilder) content : new StringBuilder(content);
+
       CodePointCharStream stream = CharStreams.fromReader(new StringReader(content.toString()));
       JavaLexer lexer = new JavaLexer(stream);
 
@@ -113,15 +99,13 @@ public class JavaCodeAnalyzer implements CodeAnalyzer {
         EditorColorScheme.Ninja,
         EditorColorScheme.KEYWORD
       };
-      int lbraceCount = 0;
-      Stack<Integer> lbraceLevels = new Stack<>();
 
       Stack<BlockLine> stack = new Stack<>();
       TrieTree<Object> tree = new TrieTree<>();
       int type, currSwitch = 1, maxSwitch = 0, previous = 0;
       int lastLine = 1;
       int line, column;
-      var prevIsTagName = false;
+
       tree.put("String", OBJECT);
       tree.put("Object", OBJECT);
       while (delegate.shouldAnalyze()) {
@@ -134,7 +118,7 @@ public class JavaCodeAnalyzer implements CodeAnalyzer {
         line = token.getLine() - 1;
         type = token.getType();
         String text1 = token.getText();
-        var tokenLength = token.getText().length();
+
         column = token.getCharPositionInLine();
         if (type == JavaLexer.EOF) {
           lastLine = line;
@@ -328,7 +312,7 @@ public class JavaCodeAnalyzer implements CodeAnalyzer {
           case JavaLexer.IDENTIFIER:
             {
               info.addIdentifier(token.getText());
-              boolean isBold, isItalic, isUnderLineMode = false;
+
               boolean isDot = true;
 
               int colorid = EditorColorScheme.TEXT_NORMAL;
@@ -439,9 +423,9 @@ public class JavaCodeAnalyzer implements CodeAnalyzer {
                 if (currSwitch > maxSwitch) {
                   maxSwitch = currSwitch;
                 }
-                currSwitch = 0; // بازنشانی شمارش برای سطح بعدی
+                currSwitch = 0;
               }
-              currSwitch++; // افزایش شمارنده برای سطح nesting فعلی
+              currSwitch++; // ا
               break;
             }
 
@@ -562,16 +546,9 @@ public class JavaCodeAnalyzer implements CodeAnalyzer {
 
               super.visit(arg0, arg1);
             }
-
-            @Override
-            public void visit(Parameter arg0, Void arg1) {
-              var li = arg0.getBegin().get().line;
-              var col = arg0.getBegin().get().column;
-              Utils.setSpanEFO(result, li, col + 2, EditorColorScheme.javaparament);
-              super.visit(arg0, arg1);
-            }
           },
           null);
+      
       unusedImport.removeIf(importName -> usedVariables.contains(getSimpleName(importName)));
       declaredVariables.removeAll(usedVariables);
 
@@ -585,16 +562,13 @@ public class JavaCodeAnalyzer implements CodeAnalyzer {
       for (var unusedVar : declaredVariables) {
         var lines = inline.get(unusedVar);
         var col = incol.get(unusedVar);
-        Utils.setSpanEFO(
-            result,
-            lines.intValue(),
-            col.intValue() + unusedVar.length(),
-            EditorColorScheme.COMMENT);
+        Utils.setSpanEFO(result, lines.intValue(), col.intValue() + 3, EditorColorScheme.COMMENT);
       }
       for (var it : mtcall) {
         var li = mlines.get(it);
         var col = mcoloum.get(it);
-        Utils.setSpanEFO(result, li, col + 2, EditorColorScheme.javaoprator);
+        Utils.setSpanEFO(result, li, col + 2, EditorColorScheme.KEYWORD);
+        editor.setShowIcon(li);
       }
 
     } catch (IOException e) {
